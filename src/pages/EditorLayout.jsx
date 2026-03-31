@@ -25,8 +25,10 @@ const EditorLayout = () => {
   const [selectedId, setSelectedId] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [activePanel, setActivePanel] = useState(null);
+  // Add this state to track the full template details
+const [templateDetails, setTemplateDetails] = useState(null);
   
-  // ADDED: State for resizing
+const [currentFlyerData, setCurrentFlyerData] = useState(null);
   const [resizingHandle, setResizingHandle] = useState(null);
 const handleLogout = () => {
   localStorage.removeItem("user");
@@ -37,6 +39,7 @@ const handleLogout = () => {
   navigate("/");
 };
   const updateCanvas = (data) => {
+    setTemplateDetails(data);
     const newSize = {
       width: Number(data.canvasSize?.width) || 500,
       height: Number(data.canvasSize?.height) || 650
@@ -63,29 +66,32 @@ const handleLogout = () => {
     setTimeout(() => calculateFitScale(newSize), 100);
   };
 
-  useEffect(() => {
-    const loadTemplate = async () => {
-      try {
-        setLoading(true);
-        if (id) {
-          const response = await fetch(`http://localhost:5000/api/flyers/${id}`);
-          const data = await response.json();
-          if (data) {
-            updateCanvas(data);
-            return;
-          }
+useEffect(() => {
+  const loadTemplate = async () => {
+    try {
+      setLoading(true);
+      if (id) {
+        const response = await fetch(`https://tripsera-2026.onrender.com/api/flyers/${id}`);
+        const data = await response.json();
+        if (data) {
+          updateCanvas(data);
+          setTemplateDetails(data); // <--- Save the full object here
+          return;
         }
-        if (location.state?.template) {
-          updateCanvas(location.state.template);
-        }
-      } catch (err) {
-        toast.error("Could not load template");
-      } finally {
-        setLoading(false);
       }
-    };
-    loadTemplate();
-  }, [id]);
+      // Handle the location state template if needed
+      if (location.state?.template) {
+        updateCanvas(location.state.template);
+        setTemplateDetails(location.state.template); // <--- And here
+      }
+    } catch (err) {
+      toast.error("Could not load template");
+    } finally {
+      setLoading(false);
+    }
+  };
+  loadTemplate();
+}, [id]);
 
   const handleAddElement = (type, content = "", color = "#6366f1") => {
     let elementStyle = {
@@ -222,7 +228,7 @@ const handleAddImage = (url) => {
       toast.info("Saving...");
       const canvas = await html2canvas(canvasElement, { useCORS: true, scale: 0.2 });
       const thumbnail = canvas.toDataURL("image/jpeg", 0.6);
-      await fetch("http://localhost:5000/api/save-flyer", {
+      await fetch("https://tripsera-2026.onrender.com/api/save-flyer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: "My New Flyer", thumbnail, elements, canvasSize }),
@@ -307,44 +313,136 @@ const handleAddImage = (url) => {
     setSelectedId(null);
     toast.success("Element deleted");
   };
-// Inside EditorLayout.jsx
 
+const loadRazorpay = () => {
+  return new Promise((resolve) => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 
- const handleExport = async () => {
-    const canvasElement = document.getElementById("canvas-root");
-    if (!canvasElement) return;
+const handleExport = async () => {
+  // Get the dynamic price. Default to 500 only if something went wrong.
+  const dynamicPrice = templateDetails?.price !== undefined ? templateDetails.price : 500;
 
-    // Deselect before export to remove borders/handles from the image
-    const currentSelection = selectedId;
-    setSelectedId(null);
+  // OPTIONAL: Skip Razorpay if the template is free
+  if (dynamicPrice === 0) {
+    toast.success("Free template! Starting download...");
+    executeDownload();
+    return;
+  }
 
-    // Small delay to allow React to clear the selection UI
-    setTimeout(async () => {
-      try {
-        toast.info("Generating high-quality export...");
-        const canvas = await html2canvas(canvasElement, {
-          useCORS: true,
-          scale: 3, // Higher scale for better print quality
-          backgroundColor: "#ffffff",
-          logging: false,
-          // Ignore the selection UI if it somehow persists
-          ignoreElements: (element) => element.classList.contains('selection-handle')
-        });
+  const res = await loadRazorpay();
+  if (!res) {
+    toast.error("Razorpay SDK failed to load. Check your connection.");
+    return;
+  }
 
-        const image = canvas.toDataURL("image/jpeg", 1.0);
-        const link = document.createElement("a");
-        link.download = `Flyer-${Date.now()}.jpg`;
-        link.href = image;
-        link.click();
-        toast.success("Download started!");
-      } catch (err) {
-        console.error(err);
-        toast.error("Export failed");
-      } finally {
-        setSelectedId(currentSelection); // Restore selection
+  try {
+    toast.info(`Initiating payment for ₹${dynamicPrice}...`);
+    
+    // 1. Create order on backend with the dynamic amount
+    const orderResponse = await fetch("https://tripsera-2026.onrender.com/api/create-order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount: dynamicPrice }), 
+    });
+
+    if (!orderResponse.ok) {
+      const errorText = await orderResponse.json();
+      throw new Error(errorText.error || "Server failed to create Razorpay order");
+    }
+
+    const orderData = await orderResponse.json();
+
+    // 2. Open Razorpay Checkout
+    const options = {
+      key: import.meta.env.RAZORPAY_KEY_ID, // Replace with your actual Key ID
+      amount: orderData.amount,
+      currency: orderData.currency,
+      name: "Tripsera Agency",
+      description: `Premium Download: ${templateDetails?.title || "Flyer"}`,
+      order_id: orderData.id,
+      handler: async function (response) {
+        toast.info("Verifying payment...");
+        try {
+          const verifyRes = await fetch("https://tripsera-2026.onrender.com/api/verify-payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            }),
+          });
+
+          const verifyData = await verifyRes.json();
+          
+          if (verifyData.success) {
+            toast.success("Payment Successful!");
+            executeDownload(); 
+          } else {
+            toast.error("Payment verification failed.");
+          }
+        } catch (vErr) {
+          toast.error("Verification server unreachable");
+        }
+      },
+      prefill: {
+        name: user?.name || "Customer",
+        email: user?.email || "customer@example.com",
+      },
+      theme: { color: "#6366f1" },
+      modal: {
+        ondismiss: function() {
+          toast.dismiss();
+          toast.error("Payment cancelled.");
+        }
       }
-    }, 100);
-  };
+    };
+
+    const paymentObject = new window.Razorpay(options);
+    paymentObject.on('payment.failed', (response) => {
+        toast.error(`Payment Failed: ${response.error.description}`);
+    });
+    paymentObject.open();
+
+  } catch (error) {
+    console.error("Export Flow Error:", error);
+    toast.error(error.message || "Error initiating payment");
+  }
+};
+
+// Extracted download logic
+const executeDownload = async () => {
+  const canvasElement = document.getElementById("canvas-root");
+  if (!canvasElement) return;
+
+  const currentSelection = selectedId;
+  setSelectedId(null);
+
+  setTimeout(async () => {
+    try {
+      const canvas = await html2canvas(canvasElement, {
+        useCORS: true,
+        scale: 3,
+        backgroundColor: "#ffffff",
+      });
+      const image = canvas.toDataURL("image/jpeg", 1.0);
+      const link = document.createElement("a");
+      link.download = `Flyer-Premium-${Date.now()}.jpg`;
+      link.href = image;
+      link.click();
+    } catch (err) {
+      toast.error("Export failed during rendering");
+    } finally {
+      setSelectedId(currentSelection);
+    }
+  }, 100);
+};
 
 const renderHandle = (direction, cursor) => (
   <div
@@ -513,7 +611,7 @@ const renderHandle = (direction, cursor) => (
    {el.type === "image" && (
   <img 
     src={el.src.startsWith('http') 
-      ? `http://localhost:5000/api/proxy?url=${encodeURIComponent(el.src)}` 
+      ? `https://tripsera-2026.onrender.com/api/proxy?url=${encodeURIComponent(el.src)}` 
       : el.src} 
     crossOrigin="anonymous" 
     className="w-full h-full pointer-events-none object-cover rounded-[inherit]" 
