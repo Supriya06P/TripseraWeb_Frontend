@@ -55,7 +55,7 @@ const TemplateEditor = () => {
     };
 
     try {
-      const response = await fetch('https://tripsera-web-backend-p3xr.vercel.app/api/save-flyer', {
+      const response = await fetch('https://tripsera-web-backend.vercel.app/api/save-flyer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(flyerData),
