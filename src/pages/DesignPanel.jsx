@@ -11,7 +11,7 @@ const DesignPanel = ({ onSelectTemplate }) => {
     const fetchTemplates = async () => {
       try {
         setLoading(true);
-        const response = await fetch("https://tripsera-web-backend-p3xr.vercel.app/api/flyers");
+        const response = await fetch("https://tripsera-web-backend.vercel.app/api/flyers");
         const data = await response.json();
         if (Array.isArray(data)) setTemplates(data);
       } catch (err) {
