@@ -11,7 +11,7 @@ const DesignPanel = ({ onSelectTemplate }) => {
     const fetchTemplates = async () => {
       try {
         setLoading(true);
-        const response = await fetch("http://localhost:5000/api/flyers");
+        const response = await fetch("https://tripsera-2026.onrender.com/api/flyers");
         const data = await response.json();
         if (Array.isArray(data)) setTemplates(data);
       } catch (err) {
