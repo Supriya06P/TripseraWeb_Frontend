@@ -71,7 +71,7 @@ useEffect(() => {
     try {
       setLoading(true);
       if (id) {
-        const response = await fetch(`https://tripsera-web-backend-p3xr-a08bak8uj-supriya06ps-projects.vercel.app/api/flyers/${id}`);
+        const response = await fetch(`https://tripsera-web-backend-p3xr.vercel.app/api/flyers/${id}`);
         const data = await response.json();
         if (data) {
           updateCanvas(data);
@@ -228,7 +228,7 @@ const handleAddImage = (url) => {
       toast.info("Saving...");
       const canvas = await html2canvas(canvasElement, { useCORS: true, scale: 0.2 });
       const thumbnail = canvas.toDataURL("image/jpeg", 0.6);
-      await fetch("https://tripsera-web-backend-p3xr-a08bak8uj-supriya06ps-projects.vercel.app/api/save-flyer", {
+      await fetch("https://tripsera-web-backend-p3xr.vercel.app/api/save-flyer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: "My New Flyer", thumbnail, elements, canvasSize }),
@@ -345,7 +345,7 @@ const handleExport = async () => {
     toast.info(`Initiating payment for ₹${dynamicPrice}...`);
     
     // 1. Create order on backend with the dynamic amount
-    const orderResponse = await fetch("https://tripsera-web-backend-p3xr-a08bak8uj-supriya06ps-projects.vercel.app/api/create-order", {
+    const orderResponse = await fetch("https://tripsera-web-backend-p3xr.vercel.app/api/create-order", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ amount: dynamicPrice }), 
@@ -369,7 +369,7 @@ const handleExport = async () => {
       handler: async function (response) {
         toast.info("Verifying payment...");
         try {
-          const verifyRes = await fetch("https://tripsera-web-backend-p3xr-a08bak8uj-supriya06ps-projects.vercel.app/api/verify-payment", {
+          const verifyRes = await fetch("https://tripsera-web-backend-p3xr.vercel.app/api/verify-payment", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -611,7 +611,7 @@ const renderHandle = (direction, cursor) => (
    {el.type === "image" && (
   <img 
     src={el.src.startsWith('http') 
-      ? `https://tripsera-web-backend-p3xr-a08bak8uj-supriya06ps-projects.vercel.app/api/proxy?url=${encodeURIComponent(el.src)}` 
+      ? `https://tripsera-web-backend-p3xr.vercel.app/api/proxy?url=${encodeURIComponent(el.src)}` 
       : el.src} 
     crossOrigin="anonymous" 
     className="w-full h-full pointer-events-none object-cover rounded-[inherit]" 
