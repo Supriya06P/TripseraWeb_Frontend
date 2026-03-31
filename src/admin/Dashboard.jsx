@@ -62,10 +62,10 @@ const Dashboard = () => {
       setLoading(true);
       try {
         const [flyerRes, userRes, recentRes, activityRes] = await Promise.all([
-          fetch('http://localhost:5000/api/flyers'),
-          fetch('http://localhost:5000/api/users/count'),
-          fetch('http://localhost:5000/api/flyers/latest'),
-          fetch('http://localhost:5000/api/flyers/recent-count')
+          fetch('https://tripsera-2026.onrender.com/api/flyers'),
+          fetch('https://tripsera-2026.onrender.com/api/users/count'),
+          fetch('https://tripsera-2026.onrender.com/api/flyers/latest'),
+          fetch('https://tripsera-2026.onrender.com/api/flyers/recent-count')
         ]);
 
         if (flyerRes.ok) {
@@ -136,41 +136,49 @@ const Dashboard = () => {
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900 font-['Plus_Jakarta_Sans',sans-serif]">
       {/* Sidebar Navigation */}
-      <aside className="w-64 border-r border-slate-200 flex flex-col p-6 bg-white">
-        <div className="flex items-center gap-2 mb-10 px-2">
-          <div className="bg-gradient-to-br from-purple-600 to-indigo-600 p-2 rounded-xl shadow-lg shadow-purple-200 group-hover:rotate-[15deg] group-hover:scale-110 transition-all duration-300">
-            <Plane className="w-6 h-6 text-white" />
-          </div>
-          <h1 className="text-xl font-black tracking-tighter bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-            Tripsera
-            <span className="text-[10px] text-black font-black uppercase tracking-widest block bg-none">
-              Admin Panel
-            </span>
-          </h1>
-        </div>
+     <aside className="relative w-64 border-r border-slate-200 flex flex-col p-6 bg-white overflow-hidden">
+  {/* --- SIDEBAR BACKGROUND BLOBS --- */}
+  <div className="absolute inset-0 pointer-events-none overflow-hidden">
+    <div className="absolute -top-20 -left-20 w-40 h-40 bg-purple-400/40 rounded-full filter blur-[60px] animate-blob" />
+    <div className="absolute top-1/2 -right-10 w-32 h-32 bg-indigo-300/40 rounded-full filter blur-[50px] animate-blob animation-delay-2000" />
+    <div className="absolute -bottom-10 left-10 w-36 h-36 bg-purple-200/30 rounded-full filter blur-[60px] animate-blob animation-delay-4000" />
+  </div>
 
-        <nav className="flex-1 space-y-1">
-          <Link to="/admin" className="flex items-center gap-3 p-3 bg-purple-50 text-purple-700 rounded-xl font-bold transition-all">
-            <LayoutDashboard size={20} /> Dashboard
-          </Link>
-          <Link to="/admin/editor" className="flex items-center gap-3 p-3 text-slate-600 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all font-medium">
-            <PlusCircle size={20} /> Create Template
-          </Link>
-          <Link to="/gallery" className="flex items-center gap-3 p-3 text-slate-600 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all font-medium">
-            <ImageIcon size={20} /> View Gallery
-          </Link>
-          <div className="pt-4 mt-4 border-t border-slate-100">
-            <Link
-              to="/admin/manage-templates"
-              className="flex items-center gap-3 p-3 text-slate-600 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all font-medium"
-            >
-              <Settings size={20} /> Manage Templates
-            </Link>
-          </div>
-        </nav>
+  {/* Sidebar Content (Added z-10 to stay above blobs) */}
+  <div className="relative z-10 flex flex-col h-full">
+    <div className="flex items-center gap-2 mb-10 px-2 group">
+      <div className="bg-gradient-to-br from-purple-600 to-indigo-600 p-2 rounded-xl shadow-lg shadow-purple-200 group-hover:rotate-[15deg] group-hover:scale-110 transition-all duration-300">
+        <Plane className="w-6 h-6 text-white" />
+      </div>
+      <h1 className="text-xl font-black tracking-tighter bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+        Tripsera
+        <span className="text-[10px] text-black font-black uppercase tracking-widest block bg-none">
+          Admin Panel
+        </span>
+      </h1>
+    </div>
 
-
-      </aside>
+    <nav className="flex-1 space-y-1">
+      <Link to="/admin" className="flex items-center gap-3 p-3 bg-purple-50/80 backdrop-blur-sm text-purple-700 rounded-xl font-bold transition-all border border-purple-100/50">
+        <LayoutDashboard size={20} /> Dashboard
+      </Link>
+      <Link to="/admin/editor" className="flex items-center gap-3 p-3 text-slate-600 hover:text-purple-600 hover:bg-purple-50/80 rounded-xl transition-all font-medium">
+        <PlusCircle size={20} /> Create Template
+      </Link>
+      <Link to="/gallery" className="flex items-center gap-3 p-3 text-slate-600 hover:text-purple-600 hover:bg-purple-50/80 rounded-xl transition-all font-medium">
+        <ImageIcon size={20} /> View Gallery
+      </Link>
+      <div className="pt-4 mt-4 border-t border-slate-100">
+        <Link
+          to="/admin/manage-templates"
+          className="flex items-center gap-3 p-3 text-slate-600 hover:text-purple-600 hover:bg-purple-50/80 rounded-xl transition-all font-medium"
+        >
+          <Settings size={20} /> Manage Templates
+        </Link>
+      </div>
+    </nav>
+  </div>
+</aside>
 
       <main className="flex-1 overflow-y-auto p-8">
         <header className="flex justify-between items-center mb-10">
@@ -227,6 +235,16 @@ const Dashboard = () => {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    {/* Top Left Purple */}
+    <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-purple-500/50 rounded-full mix-blend-multiply filter blur-[120px] animate-blob opacity-70" />
+    
+    {/* Bottom Right Indigo */}
+    <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-indigo-500/50 rounded-full mix-blend-multiply filter blur-[120px] animate-blob animation-delay-2000 opacity-70" />
+    
+    {/* Middle Pinkish (Optional for extra depth) */}
+    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] bg-pink-500/50 rounded-full mix-blend-multiply filter blur-[100px] animate-blob animation-delay-4000 opacity-50" />
+  </div>
           {stats.map((stat, i) => (
             <Card key={i} className="bg-white border-slate-200 shadow-sm hover:shadow-md transition-shadow rounded-2xl border-none ring-1 ring-slate-200">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -332,7 +350,7 @@ const Dashboard = () => {
                     </div>
                   </div>
 
-                  <h4 className="text-5xl font-black text-slate-800 group-hover:text-purple-700 transition-colors leading-tight mb-4">
+                  <h4 className="text-3xl font-black text-slate-800 group-hover:text-purple-700 transition-colors leading-tight mb-4">
                     {lastTemplate.title || "Untitled Flyer"}
                   </h4>
 
