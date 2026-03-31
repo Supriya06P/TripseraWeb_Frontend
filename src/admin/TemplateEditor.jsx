@@ -20,6 +20,7 @@ const TemplateEditor = () => {
   const [showAssets, setShowAssets] = useState(false);
   const [assetType, setAssetType] = useState('image');
   const [jsonString, setJsonString] = useState("[]");
+  const [metaData, setMetaData] = useState({ title: "New Flyer", price: "0" });
   const [canvasSize, setCanvasSize] = useState({ width: 400, height: 560 });
   const isInternalUpdate = useRef(false);
   const adjustZIndex = (id, direction) => {
@@ -44,24 +45,24 @@ const TemplateEditor = () => {
     });
 
   };
+
   const handleSave = async () => {
     const flyerData = {
-      title: "My New Flyer",
+      title: metaData.title, // Dynamic title
+      price: metaData.price, // Dynamic price
       canvasSize: canvasSize,
       elements: elements,
     };
 
     try {
-      const response = await fetch('http://localhost:5000/api/save-flyer', {
+      const response = await fetch('https://tripsera-2026.onrender.com/api/save-flyer', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(flyerData),
       });
 
       if (response.ok) {
-        toast.success("Design saved successfully to the database!");
+        toast.success(`${metaData.title} saved successfully!`);
       } else {
         const errorData = await response.json();
         toast.error(`Save failed: ${errorData.error}`);
@@ -71,7 +72,7 @@ const TemplateEditor = () => {
       toast.error("Could not connect to the server.");
     }
   };
-  const images = import.meta.glob('../assets/*.{png,jpg,jpeg,svg,webp}', {
+  const images = import.meta.glob('../assets/images/*.{png,jpg,jpeg,svg,webp}', {
     eager: true,
     import: 'default'
   });
@@ -98,9 +99,17 @@ const TemplateEditor = () => {
       const { template } = location.state;
       setElements(template.elements || []);
       if (template.canvasSize) setCanvasSize(template.canvasSize);
+
+      // Set the metaData from the loaded template
+      setMetaData({
+        title: template.title || "Untitled Flyer",
+        price: template.price || "0"
+      });
+
       toast.success("Design Loaded");
     }
   }, [location.state]);
+
   useEffect(() => {
     if (!isInternalUpdate.current) {
       setJsonString(JSON.stringify({ canvasSize, elements }, null, 2));
@@ -224,6 +233,7 @@ const TemplateEditor = () => {
           <IconButton icon={<Video />} label="Video" onClick={() => { setAssetType('video'); setShowAssets(true); }} activeColor={PURPLE_PAIN} />
         </aside>
 
+
         {showFullCode && (
           <aside className="w-[380px] border-r bg-[#121212] flex flex-col z-10 animate-in slide-in-from-left duration-300">
             <div className="p-4 bg-[#1e1e1e] text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] flex justify-between items-center">
@@ -301,8 +311,20 @@ const TemplateEditor = () => {
           </aside>
         )}
 
+
         {/* Main Canvas Area */}
         <main className="flex-1 bg-[#f8fafc] flex items-center justify-center p-12 overflow-auto relative" onClick={() => setSelectedId(null)}>
+          {/* --- BACKGROUND BLOBS START --- */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {/* Top Left Purple */}
+            <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-purple-500/40 rounded-full mix-blend-multiply filter blur-[120px] animate-blob opacity-70" />
+
+            {/* Bottom Right Indigo */}
+            <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-indigo-400/30 rounded-full mix-blend-multiply filter blur-[120px] animate-blob animation-delay-2000 opacity-70" />
+
+            {/* Middle Pinkish for extra depth */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] bg-pink-400/20 rounded-full mix-blend-multiply filter blur-[100px] animate-blob animation-delay-4000 opacity-50" />
+          </div>
           <div
             id="canvas-container"
             className="bg-white shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] relative transition-all rounded-sm"
@@ -376,16 +398,69 @@ const TemplateEditor = () => {
         {/* Properties Sidebar */}
         <aside className="w-80 border-l bg-white p-6 shadow-xl overflow-y-auto z-20">
           {!selectedElement ? (
-            <div className="space-y-6">
-              <div className="text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] flex items-center gap-2"><Maximize2 size={14} /> Canvas Settings</div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase">Width</label>
-                  <Input className="rounded-xl border-slate-200 focus:ring-purple-500" type="number" value={canvasSize.width} onChange={(e) => setCanvasSize(p => ({ ...p, width: parseInt(e.target.value) }))} />
+            <div className="space-y-8 animate-in fade-in duration-300">
+              {/* Template Meta Information */}
+              <div className="space-y-4">
+                <div className="text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] flex items-center gap-2">
+                  <Settings2 size={14} /> Template Details
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase">Height</label>
-                  <Input className="rounded-xl border-slate-200 focus:ring-purple-500" type="number" value={canvasSize.height} onChange={(e) => setCanvasSize(p => ({ ...p, height: parseInt(e.target.value) }))} />
+
+                <div className="space-y-3">
+                  {/* Title Input */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase">Template Title</label>
+                    <Input
+                      placeholder="e.g. Summer Beach Party"
+                      className="rounded-xl border-slate-200 focus:ring-purple-500 h-10 text-sm"
+                      value={metaData.title}
+                      onChange={(e) => setMetaData(p => ({ ...p, title: e.target.value }))}
+                    />
+                  </div>
+
+                  {/* Price Input */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase">Price (INR)</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">₹</span>
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        className="rounded-xl border-slate-200 focus:ring-purple-500 h-10 text-sm pl-7"
+                        value={metaData.price}
+                        onChange={(e) => setMetaData(p => ({ ...p, price: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="h-[1px] bg-slate-100" />
+
+              {/* Canvas Settings */}
+              <div className="space-y-4">
+                <div className="text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] flex items-center gap-2">
+                  <Maximize2 size={14} /> Canvas Dimensions
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase">Width</label>
+                    <Input
+                      className="rounded-xl border-slate-200 focus:ring-purple-500 h-10 text-sm"
+                      type="number"
+                      value={canvasSize.width}
+                      onChange={(e) => setCanvasSize(p => ({ ...p, width: parseInt(e.target.value) || 0 }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase">Height</label>
+                    <Input
+                      className="rounded-xl border-slate-200 focus:ring-purple-500 h-10 text-sm"
+                      type="number"
+                      value={canvasSize.height}
+                      onChange={(e) => setCanvasSize(p => ({ ...p, height: parseInt(e.target.value) || 0 }))}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
