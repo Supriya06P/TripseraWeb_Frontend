@@ -75,7 +75,7 @@ const Gallery = () => {
     const fetchTemplates = async () => {
       try {
         setLoading(true);
-        const response = await fetch("http://localhost:5000/api/flyers");
+        const response = await fetch("https://tripsera-2026.onrender.com/api/flyers");
         const data = await response.json();
         const formattedData = data.map(item => ({
           ...item,
