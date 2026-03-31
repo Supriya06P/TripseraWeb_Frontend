@@ -75,7 +75,7 @@ const Gallery = () => {
     const fetchTemplates = async () => {
       try {
         setLoading(true);
-        const response = await fetch("https://tripsera-web-backend-p3xr.vercel.app/api/flyers");
+        const response = await fetch("https://tripsera-web-backend.vercel.app/api/flyers");
         const data = await response.json();
         const formattedData = data.map(item => ({
           ...item,
