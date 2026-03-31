@@ -9,7 +9,7 @@ import { Plane, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
-const API_URL ="https://tripsera-web-backend-p3xr-a08bak8uj-supriya06ps-projects.vercel.app/api/auth";
+const API_URL ="https://tripsera-web-backend-p3xr.vercel.app/api/auth";
 
 const authSchema = z.object({
   email: z.string().trim().email({ message: "Please enter a valid email address" }),
