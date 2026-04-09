@@ -15,8 +15,7 @@ const EditorLayout = () => {
   const location = useLocation();
   const stageRef = useRef(null);
 
-  const user = { name: "John Doe", email: "john@tripsera.com", role: "admin", agencyName: "Tripsera Agency" };
-
+  
   const [activeTab, setActiveTab] = useState("templates");
   const [canvasSize, setCanvasSize] = useState({ width: 500, height: 650 });
   const [elements, setElements] = useState([]);
@@ -27,17 +26,20 @@ const EditorLayout = () => {
   const [activePanel, setActivePanel] = useState(null);
   // Add this state to track the full template details
 const [templateDetails, setTemplateDetails] = useState(null);
-  
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem("user");
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
 const [currentFlyerData, setCurrentFlyerData] = useState(null);
   const [resizingHandle, setResizingHandle] = useState(null);
 const handleLogout = () => {
   localStorage.removeItem("user");
   localStorage.removeItem("token");
-  // If you have a setUser state here, call it: 
-  // setUser(null); 
+  setUser(null); // Clear the state
   toast.success("Logged out successfully");
-  navigate("/");
+  navigate("/auth"); // Redirect to login page
 };
+
   const updateCanvas = (data) => {
     setTemplateDetails(data);
     const newSize = {
@@ -71,7 +73,7 @@ useEffect(() => {
     try {
       setLoading(true);
       if (id) {
-        const response = await fetch(`https://tripsera-web-backend.vercel.app/api/flyers/${id}`);
+        const response = await fetch(`http://localhost:5000/api/flyers/${id}`);
         const data = await response.json();
         if (data) {
           updateCanvas(data);
@@ -228,7 +230,7 @@ const handleAddImage = (url) => {
       toast.info("Saving...");
       const canvas = await html2canvas(canvasElement, { useCORS: true, scale: 0.2 });
       const thumbnail = canvas.toDataURL("image/jpeg", 0.6);
-      await fetch("https://tripsera-web-backend.vercel.app/api/save-flyer", {
+      await fetch("http://localhost:5000/api/save-flyer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: "My New Flyer", thumbnail, elements, canvasSize }),
@@ -345,7 +347,7 @@ const handleExport = async () => {
     toast.info(`Initiating payment for ₹${dynamicPrice}...`);
     
     // 1. Create order on backend with the dynamic amount
-    const orderResponse = await fetch("https://tripsera-web-backend.vercel.app/api/create-order", {
+    const orderResponse = await fetch("http://localhost:5000/api/create-order", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ amount: dynamicPrice }), 
