@@ -44,28 +44,31 @@ const Dashboard = () => {
 
   useEffect(() => {
     // 1. SET USER FROM LOCAL STORAGE
-    const savedUser = localStorage.getItem('tripsera_user');
-    if (savedUser) {
-      try {
-        const userData = JSON.parse(savedUser);
-        setUser(prev => ({
-          ...prev,
-          name: userData.agencyName || (userData.email ? userData.email.split('@')[0] : "Admin")
-        }));
-      } catch (e) {
-        console.error("Error parsing user data:", e);
-      }
+    const savedUser = localStorage.getItem('tripsera_user') || localStorage.getItem('user');
+  
+  if (savedUser) {
+    try {
+      const userData = JSON.parse(savedUser);
+      setUser({
+        name: userData.agencyName || (userData.email ? userData.email.split('@')[0] : "Admin"),
+        email: userData.email || "admin@tripsera.com", // Update email from storage
+        agencyName: userData.agencyName || "Tripsera Partner", // Update agency name
+        role: userData.role || "admin"
+      });
+    } catch (e) {
+      console.error("Error parsing user data:", e);
     }
+  }
 
     // 2. FETCH ALL DASHBOARD DATA
     const loadDashboardData = async () => {
       setLoading(true);
       try {
         const [flyerRes, userRes, recentRes, activityRes] = await Promise.all([
-          fetch('https://tripsera-web-backend.vercel.app/api/flyers'),
-          fetch('https://tripsera-web-backend.vercel.app/api/users/count'),
-          fetch('https://tripsera-web-backend.vercel.app/api/flyers/latest'),
-          fetch('https://tripsera-web-backend.vercel.app/api/flyers/recent-count')
+          fetch('http://localhost:5000/api/flyers'),
+          fetch('http://localhost:5000/api/users/count'),
+          fetch('http://localhost:5000/api/flyers/latest'),
+          fetch('http://localhost:5000/api/flyers/recent-count')
         ]);
 
         if (flyerRes.ok) {
