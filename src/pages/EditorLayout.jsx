@@ -73,7 +73,7 @@ useEffect(() => {
     try {
       setLoading(true);
       if (id) {
-        const response = await fetch(`http://localhost:5000/api/flyers/${id}`);
+        const response = await fetch(`https://tripsera-web-backend.vercel.app/api/flyers/${id}`);
         const data = await response.json();
         if (data) {
           updateCanvas(data);
@@ -230,7 +230,7 @@ const handleAddImage = (url) => {
       toast.info("Saving...");
       const canvas = await html2canvas(canvasElement, { useCORS: true, scale: 0.2 });
       const thumbnail = canvas.toDataURL("image/jpeg", 0.6);
-      await fetch("http://localhost:5000/api/save-flyer", {
+      await fetch("https://tripsera-web-backend.vercel.app/api/save-flyer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: "My New Flyer", thumbnail, elements, canvasSize }),
@@ -347,7 +347,7 @@ const handleExport = async () => {
     toast.info(`Initiating payment for ₹${dynamicPrice}...`);
     
     // 1. Create order on backend with the dynamic amount
-    const orderResponse = await fetch("http://localhost:5000/api/create-order", {
+    const orderResponse = await fetch("https://tripsera-web-backend.vercel.app/api/create-order", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ amount: dynamicPrice }), 
