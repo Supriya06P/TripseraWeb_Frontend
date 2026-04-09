@@ -52,7 +52,7 @@ const ManageTemplates = () => {
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
-        const response = await fetch('https://tripsera-web-backend.vercel.app/api/flyers');
+        const response = await fetch('http://localhost:5000/api/flyers');
         const data = await response.json();
         setTemplates(data);
       } catch (err) {
@@ -76,6 +76,22 @@ const ManageTemplates = () => {
       toast.error("Delete operation failed");
     }
   };
+  useEffect(() => {
+  const savedUser = localStorage.getItem('tripsera_user') || localStorage.getItem('user');
+  if (savedUser) {
+    try {
+      const userData = JSON.parse(savedUser);
+      setUser({
+        name: userData.agencyName || (userData.email ? userData.email.split('@')[0] : "Admin"),
+        email: userData.email || "admin@tripsera.com",
+        agencyName: userData.agencyName || "Tripsera Partner",
+        role: userData.role || "admin"
+      });
+    } catch (e) {
+      console.error("Error parsing user data:", e);
+    }
+  }
+}, []);
 
   const filteredTemplates = templates.filter(t =>
     (t.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
