@@ -65,10 +65,10 @@ const Dashboard = () => {
       setLoading(true);
       try {
         const [flyerRes, userRes, recentRes, activityRes] = await Promise.all([
-          fetch('http://localhost:5000/api/flyers'),
-          fetch('http://localhost:5000/api/users/count'),
-          fetch('http://localhost:5000/api/flyers/latest'),
-          fetch('http://localhost:5000/api/flyers/recent-count')
+          fetch('https://tripsera-web-backend.vercel.app/api/flyers'),
+          fetch('https://tripsera-web-backend.vercel.app/api/users/count'),
+          fetch('https://tripsera-web-backend.vercel.app/api/flyers/latest'),
+          fetch('https://tripsera-web-backend.vercel.app/api/flyers/recent-count')
         ]);
 
         if (flyerRes.ok) {
