@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { GoogleOAuthProvider } from '@react-oauth/google'; // Added this
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Gallery from "./pages/Gallery";
@@ -12,13 +13,11 @@ import AdminTemplateEditor from "./admin/TemplateEditor";
 import ManageTemplates from "./admin/ManageTemplates";
 import AdminDashboard from "./admin/Dashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
-import LegalPage from "./pages/LegalPage"; // We will create this next
+import LegalPage from "./pages/LegalPage";
 import "./index.css";
-
 const queryClient = new QueryClient();
-
 const App = () => {
-  // Content required for Razorpay Compliance
+
   const legalContent = {
     privacy: (
       <div className="space-y-4">
@@ -51,7 +50,8 @@ const App = () => {
       <div className="space-y-6">
         <p>Have questions about your account or a payment? Reach out to our support team.</p>
         <div className="p-6 bg-purple-50 rounded-2xl border border-purple-100">
-          <p className="font-bold text-purple-900">Email: supriyapachore06@gamil.com</p>
+          {/* Typo fixed: gamil to gmail */}
+          <p className="font-bold text-purple-900">Email: supriyapachore06@gmail.com</p>
           <p className="text-purple-700 mt-2">Address: Sinnar, Nashik, Maharashtra, India</p>
         </div>
       </div>
@@ -60,31 +60,33 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/gallery" element={<Gallery />} />
-            <Route path="/editor" element={<EditorLayout />} />
+   <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/gallery" element={<Gallery />} />
+              <Route path="/editor" element={<EditorLayout />} />
 
-            {/* MANDATORY COMPLIANCE ROUTES */}
-            <Route path="/privacy-policy" element={<LegalPage title="Privacy Policy" content={legalContent.privacy} />} />
-            <Route path="/terms-and-conditions" element={<LegalPage title="Terms & Conditions" content={legalContent.terms} />} />
-            <Route path="/refund-policy" element={<LegalPage title="Refund & Cancellation" content={legalContent.refund} />} />
-            <Route path="/contact" element={<LegalPage title="Contact Us" content={legalContent.contact} />} />
+              {/* MANDATORY COMPLIANCE ROUTES */}
+              <Route path="/privacy-policy" element={<LegalPage title="Privacy Policy" content={legalContent.privacy} />} />
+              <Route path="/terms-and-conditions" element={<LegalPage title="Terms & Conditions" content={legalContent.terms} />} />
+              <Route path="/refund-policy" element={<LegalPage title="Refund & Cancellation" content={legalContent.refund} />} />
+              <Route path="/contact" element={<LegalPage title="Contact Us" content={legalContent.contact} />} />
 
-            {/* ADMIN ROUTES */}
-            <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-            <Route path="/admin/editor" element={<ProtectedRoute><AdminTemplateEditor /></ProtectedRoute>} />
-            <Route path="/admin/manage-templates" element={<ProtectedRoute><ManageTemplates /></ProtectedRoute>} />
+              {/* ADMIN ROUTES */}
+              <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+              <Route path="/admin/editor" element={<ProtectedRoute><AdminTemplateEditor /></ProtectedRoute>} />
+              <Route path="/admin/manage-templates" element={<ProtectedRoute><ManageTemplates /></ProtectedRoute>} />
 
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </GoogleOAuthProvider>
     </QueryClientProvider>
   );
 };
