@@ -1,219 +1,354 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useGoogleLogin } from '@react-oauth/google';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plane, ShieldCheck } from "lucide-react";
+import { Plane, Globe, Loader2, Mail, Phone, Lock, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import { z } from "zod";
 
-const API_URL ="https://tripsera-web-backend.vercel.app/api/auth";
-
-const authSchema = z.object({
-  email: z.string().trim().email({ message: "Please enter a valid email address" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
-  agencyName: z.string().trim().min(2, { message: "Agency name must be at least 2 characters" }).optional(),
-});
+const API_URL = "http://localhost:5000/api/auth";
 
 const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
-  const [signInData, setSignInData] = useState({ email: "", password: "" });
-  const [signUpData, setSignUpData] = useState({
-    email: "",
-    password: "",
-    agencyName: "",
-    adminKey: ""
+  const [showPhoneLogin, setShowPhoneLogin] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [serverOtp, setServerOtp] = useState("");
+// Replace the old hardcoded object with this:
+const ADMIN_CREDENTIALS = {
+  email: import.meta.env.VITE_ADMIN_EMAIL,
+  password: import.meta.env.VITE_ADMIN_PASSWORD
+};
+  // --- GOOGLE LOGIN ---
+  const handleGoogleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setLoading(true);
+      try {
+        const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+        });
+        const googleUser = await res.json();
+
+        const backendRes = await fetch(`${API_URL}/google-sync`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: googleUser.email,
+            name: googleUser.name,
+            googleId: googleUser.sub,
+          }),
+        });
+
+        const data = await backendRes.json();
+
+        if (backendRes.ok) {
+          localStorage.setItem("user", JSON.stringify(data.user));
+          localStorage.setItem("token", data.token);
+          toast.success("Welcome back to Tripsera!");
+          navigate("/");
+        }
+      } catch (error) {
+        toast.error("Authentication failed. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    onError: () => toast.error("Google Login Failed"),
   });
+
+const handleEmailLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get("email");
+    const password = formData.get("password");
+
+    // 1. Check for Hardcoded Admin Credentials
+    if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
+      const adminUser = { 
+        email: email, 
+        role: "admin", 
+        agencyName: "System Administrator" 
+      };
+      
+      localStorage.setItem("user", JSON.stringify(adminUser));
+      localStorage.setItem("token", "admin-bypass-token"); // Mock token for admin
+      
+      toast.success("Admin access granted. Welcome, Commander.");
+      setLoading(false);
+      navigate("/admin");
+      return; // Exit function early
+    }
+
+    // 2. Standard User Login Flow
+    try {
+      const response = await fetch(`${API_URL}/signin`, { 
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+        localStorage.setItem("token", data.token);
+        toast.success("Welcome back!");
+        
+        // Final check: if backend also identifies user as admin
+        if (data.user.role === "admin") {
+          navigate("/admin");
+        } else {
+          navigate("/");
+        }
+      } else {
+        toast.error(data.message || "Invalid email or password.");
+      }
+    } catch (error) {
+      console.error("Login Error:", error);
+      toast.error("Server connection failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+// --- SIGN UP LOGIC ---
+const handleSignUp = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+
+  const formData = new FormData(e.currentTarget);
+  const agencyName = formData.get("agencyName");
+  const email = formData.get("email");
+  const password = formData.get("password");
+
+  try {
+    // UPDATED: Changed /register to /signup to match backend
+    const response = await fetch(`${API_URL}/signup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ agencyName, email, password }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      toast.success("Account created! Please sign in.");
+      navigate("/auth?signup=false");
+    } else {
+      toast.error(data.message || "Registration failed.");
+    }
+  } catch (error) {
+    console.error("Signup Error:", error);
+    toast.error("Server connection failed.");
+  } finally {
+    setLoading(false);
+  }
+};
+
+  // --- PHONE OTP LOGIC ---
+  const validatePhone = (num) => /^\d{10,15}$/.test(num);
+
+  const handleSendOTP = async (e) => {
+    e.preventDefault();
+    if (!validatePhone(phone)) {
+      toast.error("Enter a valid phone number.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/send-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setOtpSent(true);
+        setServerOtp(data.otp.toString());
+        toast.success("Verification code sent.");
+      } else {
+        toast.error(data.message || "Could not send code.");
+      }
+    } catch (error) {
+      toast.error("Connection error.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    if (otp === serverOtp) {
+      toast.success("Phone verified!");
+      const mockUser = { email: `${phone}@phone.com`, role: "user", agencyName: "Phone User" };
+      localStorage.setItem("user", JSON.stringify(mockUser));
+      setTimeout(() => { navigate("/"); setLoading(false); }, 1000);
+    } else {
+      toast.error("Incorrect code.");
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const userData = localStorage.getItem("user");
     if (userData) {
       try {
         const user = JSON.parse(userData);
-        if (user && user.role === "admin") {
-          navigate("/admin");
-        } else if (user) {
-          navigate("/");
-        }
-      } catch (e) {
-        console.error("Failed to parse user from storage", e);
-      }
+        if (user?.role === "admin") navigate("/admin");
+        else if (user) navigate("/");
+      } catch (e) { console.error(e); }
     }
   }, [navigate]);
-
-  const handleSignIn = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const response = await fetch(`${API_URL}/signin`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(signInData),
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Login failed");
-
-      // 1. Save to LocalStorage first
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-
-      // 2. Notify the user
-      toast.success("Welcome back!");
-
-      // 3. Navigate based on the role stored in the 'data' object
-      if (data.user && data.user.role === "admin") {
-        console.log("Redirecting to Admin...");
-        navigate("/admin", { replace: true });
-      } else {
-        console.log("Redirecting to User Home...");
-        navigate("/", { replace: true });
-      }
-
-    } catch (error) {
-      console.error("Sign in error:", error);
-      toast.error(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-  const handleSignUp = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const validated = authSchema.parse(signUpData);
-
-      const response = await fetch(`${API_URL}/signup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...validated,
-          adminKey: signUpData.adminKey
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Registration failed");
-
-      toast.success("Account created! You can now sign in.");
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        toast.error(error.errors[0].message);
-      } else {
-        toast.error(error.message);
-      }
-    } finally { setLoading(false); }
-  };
 
   const defaultTab = searchParams.get("signup") === "true" ? "signup" : "signin";
 
   return (
-    <div className="relative min-h-screen bg-slate-50 flex items-center justify-center p-4 overflow-hidden">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#FDFCFE] relative overflow-hidden font-sans">
+      {/* Background Decor */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="absolute top-[-20%] right-[-10%] w-[700px] h-[700px] bg-purple-200/40 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-violet-100/60 rounded-full blur-[100px]" />
+      </div>
 
-      {/* --- PURPLE BLUR BACKGROUND ELEMENTS --- */}
-      <div className="absolute top-[-30%] left-[-10%] w-[40%] h-[100%] rounded-full bg-purple-500/50 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[80%] rounded-full bg-purple-600/60 blur-[120px] pointer-events-none" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full bg-purple-300/20 blur-[100px] pointer-events-none" />
-
-      {/* Content wrapper with relative z-index to stay above the blurs */}
-      <div className="relative z-10 w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 mb-4 group">
-            <Plane className="w-10 h-10 text-purple-600 transition-transform group-hover:rotate-12" />
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+      <div className="w-full max-w-[420px] relative z-20">
+        <div className="flex flex-col items-center mb-10">
+          <Link to="/" className="flex items-center gap-3 group transition-transform hover:scale-105">
+            <div className="bg-gradient-to-br from-purple-600 to-violet-700 p-2.5 rounded-2xl shadow-xl shadow-purple-200 group-hover:shadow-purple-300 transition-all">
+              <Plane className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="text-2xl font-black tracking-tight bg-gradient-to-r from-purple-700 to-violet-900 bg-clip-text text-transparent">
               Tripsera
             </h1>
           </Link>
-          <p className="text-muted-foreground font-medium">MongoDB Local Edition</p>
         </div>
 
         <Tabs defaultValue={defaultTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 bg-purple-100/50 backdrop-blur-sm p-1 border border-purple-100/50">
-            <TabsTrigger value="signin" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white transition-all">Sign In</TabsTrigger>
-            <TabsTrigger value="signup" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white transition-all">Sign Up</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 mb-8 p-1 bg-purple-50/80 rounded-xl border border-purple-100">
+            <TabsTrigger value="signin" className="rounded-lg py-2.5 text-purple-900/60 data-[state=active]:bg-white data-[state=active]:text-purple-700 transition-all">Sign In</TabsTrigger>
+            <TabsTrigger value="signup" className="rounded-lg py-2.5 text-purple-900/60 data-[state=active]:bg-white data-[state=active]:text-purple-700 transition-all">Sign Up</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="signin">
-            {/* Added bg-white/80 and backdrop-blur to the cards for a glassy look */}
-            <Card className="border-purple-100 shadow-2xl shadow-purple-900/10 bg-white/80 backdrop-blur-md">
-              <form onSubmit={handleSignIn}>
-                <CardHeader>
-                  <CardTitle className="text-purple-950">Welcome Back</CardTitle>
-                  <CardDescription>Sign in to your local MongoDB account</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-email">Email</Label>
-                    <Input
-                      id="signin-email"
-                      type="email"
-                      className="focus-visible:ring-purple-500 bg-white/50"
-                      value={signInData.email}
-                      onChange={(e) => setSignInData({ ...signInData, email: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-password">Password</Label>
-                    <Input
-                      id="signin-password"
-                      type="password"
-                      className="focus-visible:ring-purple-500 bg-white/50"
-                      value={signInData.password}
-                      onChange={(e) => setSignInData({ ...signInData, password: e.target.value })}
-                      required
-                    />
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button type="submit" className="w-full bg-purple-600 hover:bg-purple-700 text-white transition-all shadow-lg shadow-purple-200" disabled={loading}>
-                    {loading ? "Connecting..." : "Sign In"}
-                  </Button>
-                </CardFooter>
-              </form>
+          {/* SIGN IN TAB */}
+          <TabsContent value="signin" className="animate-in fade-in slide-in-from-bottom-2 duration-400">
+            <Card className="border-purple-100/60 shadow-2xl shadow-purple-200/40 bg-white/90 backdrop-blur-md">
+              <CardHeader className="space-y-1 pt-8">
+                <CardTitle className="text-2xl font-bold tracking-tight text-purple-950">
+                  {otpSent ? "Verify Identity" : "Welcome Back"}
+                </CardTitle>
+                <CardDescription className="text-purple-600/60">
+                  {otpSent ? `Verification code sent to ${phone}` : "Manage your agency bookings with ease"}
+                </CardDescription>
+              </CardHeader>
+              
+              <CardContent className="space-y-6 pb-8">
+                {!showPhoneLogin ? (
+                  <form className="space-y-4" onSubmit={handleEmailLogin}>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold text-purple-800 uppercase tracking-widest ml-1">Email</Label>
+                      <div className="relative group">
+                        <Mail className="absolute left-3 top-3 w-4 h-4 text-purple-300 group-focus-within:text-purple-600 transition-colors" />
+                        <Input name="email" type="email" placeholder="name@agency.com" className="pl-10 h-11 border-purple-100 focus:border-purple-500 bg-white/50" required />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold text-purple-800 uppercase tracking-widest ml-1">Password</Label>
+                      <div className="relative group">
+                        <Lock className="absolute left-3 top-3 w-4 h-4 text-purple-300 group-focus-within:text-purple-600 transition-colors" />
+                        <Input name="password" type="password" placeholder="••••••••" className="pl-10 h-11 border-purple-100 focus:border-purple-500 bg-white/50" required />
+                      </div>
+                    </div>
+                    <Button type="submit" className="w-full h-11 bg-purple-700 hover:bg-purple-800 text-white transition-all shadow-lg shadow-purple-200 active:scale-[0.98]" disabled={loading}>
+                      {loading ? <Loader2 className="animate-spin w-5 h-5" /> : "Sign In"}
+                    </Button>
+                    <div className="flex justify-center">
+                      <button type="button" onClick={() => setShowPhoneLogin(true)} className="text-sm text-purple-600 hover:text-purple-800 font-bold transition-colors">
+                         Sign in with Phone
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <form className="space-y-5" onSubmit={otpSent ? handleVerifyOTP : handleSendOTP}>
+                    {!otpSent ? (
+                      <div className="space-y-2">
+                        <Label className="text-xs font-bold text-purple-800 uppercase tracking-widest ml-1 text-center block">Mobile Number</Label>
+                        <div className="relative group">
+                          <Phone className="absolute left-3 top-3 w-4 h-4 text-purple-300 group-focus-within:text-purple-600 transition-colors" />
+                          <Input type="tel" placeholder="+1 (555) 000-0000" value={phone} onChange={(e) => setPhone(e.target.value)} className="pl-10 h-11 border-purple-100 focus:border-purple-500" required />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4 text-center">
+                        <Input className="text-center text-3xl h-14 tracking-[0.4em] font-mono border-2 border-purple-100 focus:border-purple-600 transition-all bg-purple-50/30" maxLength={6} value={otp} onChange={(e) => setOtp(e.target.value)} required autoFocus />
+                        <button type="button" onClick={() => setOtpSent(false)} className="text-xs text-purple-400 hover:text-purple-700 underline font-medium">Re-enter number</button>
+                      </div>
+                    )}
+                    <div className="space-y-3">
+                      <Button type="submit" className="w-full h-11 bg-purple-700 hover:bg-purple-800 shadow-lg shadow-purple-200" disabled={loading}>
+                        {loading ? <Loader2 className="animate-spin w-5 h-5" /> : (otpSent ? "Verify" : "Get OTP")}
+                      </Button>
+                      <div className="flex justify-center">
+                        <button type="button" onClick={() => { setShowPhoneLogin(false); setOtpSent(false); }} className="flex items-center gap-1.5 text-sm text-purple-600 hover:text-purple-800 font-bold transition-colors">
+                          <ArrowLeft className="w-3.5 h-3.5" /> Back to Email Login
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                )}
+
+                <div className="relative flex items-center py-2">
+                  <div className="flex-grow border-t border-purple-100"></div>
+                  <span className="flex-shrink mx-4 text-[10px] font-black text-purple-300 uppercase tracking-[0.3em]">Quick Access</span>
+                  <div className="flex-grow border-t border-purple-100"></div>
+                </div>
+
+                <Button variant="outline" className="w-full h-11 border-purple-100 hover:bg-purple-50 text-purple-700 font-semibold group" onClick={() => handleGoogleLogin()} disabled={loading}>
+                  <Globe className="w-4 h-4 mr-3 text-purple-400 group-hover:text-purple-600 transition-colors" />
+                  Continue with Google
+                </Button>
+              </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="signup">
-            <Card className="border-purple-100 shadow-2xl shadow-purple-900/10 bg-white/80 backdrop-blur-md">
+          {/* SIGN UP TAB */}
+          <TabsContent value="signup" className="animate-in fade-in slide-in-from-bottom-2 duration-400">
+            <Card className="border-purple-100/60 shadow-2xl shadow-purple-200/40 bg-white/90">
+              <CardHeader className="pt-8">
+                <CardTitle className="text-2xl font-bold text-purple-950">Partner Registration</CardTitle>
+                <CardDescription className="text-purple-600/60">Register your travel agency today.</CardDescription>
+              </CardHeader>
+              
               <form onSubmit={handleSignUp}>
-                <CardHeader>
-                  <CardTitle className="text-purple-950">Create Account</CardTitle>
-                  <CardDescription>Data will be stored on your PC</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 pb-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signup-agency">Agency Name</Label>
-                    <Input id="signup-agency" type="text" className="focus-visible:ring-purple-500 bg-white/50" value={signUpData.agencyName} onChange={(e) => setSignUpData({ ...signUpData, agencyName: e.target.value })} required />
+                    <Label className="text-xs font-bold text-purple-800 uppercase tracking-widest ml-1">Agency Name</Label>
+                    <Input name="agencyName" placeholder="Global Travels Inc." className="h-11 border-purple-100 focus:border-purple-500" required />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <Input id="signup-email" type="email" className="focus-visible:ring-purple-500 bg-white/50" value={signUpData.email} onChange={(e) => setSignUpData({ ...signUpData, email: e.target.value })} required />
+                    <Label className="text-xs font-bold text-purple-800 uppercase tracking-widest ml-1">Email</Label>
+                    <Input name="email" type="email" placeholder="admin@agency.com" className="h-11 border-purple-100 focus:border-purple-500" required />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
-                    <Input id="signup-password" type="password" className="focus-visible:ring-purple-500 bg-white/50" value={signUpData.password} onChange={(e) => setSignUpData({ ...signUpData, password: e.target.value })} required />
-                  </div>
-                  <div className="pt-4 mt-2 border-t border-dashed border-purple-200">
-                    <div className="flex items-center gap-2 mb-2 text-xs font-semibold text-purple-600 uppercase">
-                      <ShieldCheck className="w-3 h-3" /> Admin Key
-                    </div>
-                    <Input
-                      type="password"
-                      className="focus-visible:ring-purple-500 bg-white/50"
-                      placeholder="Optional Admin Secret"
-                      value={signUpData.adminKey}
-                      onChange={(e) => setSignUpData({ ...signUpData, adminKey: e.target.value })}
-                    />
+                    <Label className="text-xs font-bold text-purple-800 uppercase tracking-widest ml-1">Password</Label>
+                    <Input name="password" type="password" placeholder="••••••••" className="h-11 border-purple-100 focus:border-purple-500" required />
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button type="submit" className="w-full bg-purple-600 hover:bg-purple-700 text-white transition-all shadow-lg shadow-purple-200" disabled={loading}>
-                    {loading ? "Saving to MongoDB..." : "Create Account"}
+                  <Button type="submit" className="w-full h-11 bg-purple-600 hover:bg-purple-700 text-white transition-all shadow-lg shadow-purple-200" disabled={loading}>
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating Account...
+                      </>
+                    ) : "Create Account"}
                   </Button>
                 </CardFooter>
               </form>
