@@ -52,7 +52,7 @@ const ManageTemplates = () => {
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/flyers');
+        const response = await fetch('https://tripsera-web-backend.vercel.app/api/flyers');
         const data = await response.json();
         setTemplates(data);
       } catch (err) {
