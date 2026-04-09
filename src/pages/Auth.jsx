@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plane, Globe, Loader2, Mail, Phone, Lock, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
-const API_URL = "http://localhost:5000/api/auth";
+const API_URL = "https://tripsera-web-backend.vercel.app/api/auth";
 
 const Auth = () => {
   const navigate = useNavigate();
