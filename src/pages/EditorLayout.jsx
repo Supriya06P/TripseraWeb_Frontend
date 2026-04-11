@@ -230,7 +230,7 @@ const handleAddImage = (url) => {
       toast.info("Saving...");
       const canvas = await html2canvas(canvasElement, { useCORS: true, scale: 0.2 });
       const thumbnail = canvas.toDataURL("image/jpeg", 0.6);
-      await fetch("http://localhost:5000/api/save-flyer", {
+      await fetch("https://tripsera-web-backend.vercel.app/api/save-flyer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: "My New Flyer", thumbnail, elements, canvasSize }),
