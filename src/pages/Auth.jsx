@@ -53,6 +53,11 @@ const ADMIN_CREDENTIALS = {
           toast.success("Welcome back to Tripsera!");
           navigate("/");
         }
+        else {
+          // Add this to see what the server is saying
+          console.error("Backend Error:", data);
+          toast.error(data.message || "Google sync failed.");
+        }
       } catch (error) {
         toast.error("Authentication failed. Please try again.");
       } finally {
