@@ -133,9 +133,9 @@ export default function Chatbot() {
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          Authorization: Bearer `${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+},
         body: JSON.stringify({
           messages: [...messages, userMsg].map(({ role, content }) => ({
             role,
