@@ -250,7 +250,7 @@ const handleSignUp = async (e) => {
                   {otpSent ? "Verify Identity" : "Welcome Back"}
                 </CardTitle>
                 <CardDescription className="text-purple-600/60">
-                  {otpSent ? `Verification code sent to ${phone}` : "Manage your agency bookings with ease"}
+                  {otpSent ? `Verification code sent to ${phone}` : "Please sign in to continue."}
                 </CardDescription>
               </CardHeader>
               
@@ -333,7 +333,7 @@ const handleSignUp = async (e) => {
             <Card className="border-purple-100/60 shadow-2xl shadow-purple-200/40 bg-white/90">
               <CardHeader className="pt-8">
                 <CardTitle className="text-2xl font-bold text-purple-950">Partner Registration</CardTitle>
-                <CardDescription className="text-purple-600/60">Register your travel agency today.</CardDescription>
+                <CardDescription className="text-purple-600/60">Create New Account</CardDescription>
               </CardHeader>
               
               <form onSubmit={handleSignUp}>
