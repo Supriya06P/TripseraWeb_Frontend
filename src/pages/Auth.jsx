@@ -310,10 +310,15 @@ const handleSignUp = async (e) => {
                   <div className="flex-grow border-t border-purple-100"></div>
                 </div>
 
-                <Button variant="outline" className="w-full h-11 border-purple-100 hover:bg-purple-50 text-purple-700 font-semibold group" onClick={() => handleGoogleLogin()} disabled={loading}>
-                  <Globe className="w-4 h-4 mr-3 text-purple-400 group-hover:text-purple-600 transition-colors" />
-                  Continue with Google
-                </Button>
+                <Button 
+  variant="outline" 
+  className="w-full h-11 border-purple-100 hover:bg-purple-50 text-purple-700 hover:text-black font-semibold group" 
+  onClick={() => handleGoogleLogin()} 
+  disabled={loading}
+>
+  <Globe className="w-4 h-4 mr-3 text-purple-400 group-hover:text-purple-600 transition-colors" />
+  Continue with Google
+</Button>
               </CardContent>
             </Card>
           </TabsContent>
